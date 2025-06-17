@@ -1,15 +1,16 @@
-# Ad Optimize AI Backend
+# Ad Optimize AI
 
-A sophisticated backend-focused web application with advanced data processing capabilities that allows users to upload ad data, perform complex analysis, and generate optimization strategies for advertising campaigns.
+A sophisticated web application with advanced data processing and AI agent capabilities that allows users to upload ad data, perform complex analysis, and generate optimization strategies for advertising campaigns.
 
 ## Project Overview
 
-The Ad Optimize AI Backend is a robust Node.js/Express.js application designed to process large CSV files containing advertising data and provide intelligent insights for campaign optimization. The system features:
+Ad Optimize AI is a full-stack application designed to process large CSV files containing advertising data and provide intelligent insights for campaign optimization. The system features:
 
 - **Large File Processing**: Handles CSV files up to 100MB with efficient streaming and validation
 - **Asynchronous Job Processing**: Background processing with Redis-based job queues
 - **Comprehensive Data Analysis**: Calculates key metrics (ROAS, ACOS, CTR, CPC, CPM) and identifies performance trends
 - **Intelligent Recommendations**: Generates prioritized optimization strategies based on data analysis
+- **Modern UI**: Clean, responsive interface built with React and Tailwind CSS
 - **Scalable Architecture**: Built with PostgreSQL for data persistence and Redis for job management
 - **RESTful API**: Clean, well-documented API endpoints for seamless integration
 
@@ -36,8 +37,15 @@ The Ad Optimize AI Backend is a robust Node.js/Express.js application designed t
 
 ## Tech Stack
 
-### Backend
+### Frontend
+- **Framework**: React 18
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **State Management**: React Hooks
+- **HTTP Client**: Axios
+- **Build Tool**: Vite
 
+### Backend
 - **Runtime**: Node.js (v18+)
 - **Framework**: Express.js
 - **Database**: PostgreSQL
@@ -48,9 +56,8 @@ The Ad Optimize AI Backend is a robust Node.js/Express.js application designed t
 - **Security**: Helmet, CORS, Rate Limiting
 
 ### Development Tools
-
 - **Package Manager**: npm
-- **Development Server**: Nodemon
+- **Development Server**: Nodemon (Backend), Vite (Frontend)
 - **Linting**: ESLint
 
 ## Setup Instructions
@@ -61,96 +68,110 @@ The Ad Optimize AI Backend is a robust Node.js/Express.js application designed t
 2. **PostgreSQL** (v12 or higher)
 3. **Redis** (v6 or higher)
 
-### Installation
+### Backend Setup
 
 1. **Clone the repository**
-
    ```bash
    git clone <repository-url>
    cd ad-optimize-ai
    ```
 
-2. **Install dependencies**
-
+2. **Install backend dependencies**
    ```bash
    npm install
    ```
 
 3. **Environment Configuration**
-
    ```bash
    cp env.example .env
    ```
-
+   
    Update the `.env` file with your configuration:
-
    ```env
    # Server Configuration
    PORT=3000
    NODE_ENV=development
-
+   
    # Database Configuration
    DB_HOST=localhost
    DB_PORT=5432
    DB_NAME=ad_optimize_ai
    DB_USER=postgres
    DB_PASSWORD=your_password
-
+   
    # Redis Configuration
    REDIS_HOST=localhost
    REDIS_PORT=6379
    REDIS_PASSWORD=
-
+   
    # File Upload Configuration
    MAX_FILE_SIZE=104857600
    UPLOAD_PATH=./uploads
    ```
 
 4. **Database Setup**
-
    ```bash
    # Create database
    createdb ad_optimize_ai
-
+   
    # Run schema (using psql)
    psql -d ad_optimize_ai -f src/database/schema.sql
    ```
 
 5. **Start Redis Server**
-
    ```bash
    # On macOS with Homebrew
    brew services start redis
-
+   
    # On Ubuntu/Debian
    sudo systemctl start redis-server
-
+   
    # On Windows
    redis-server
    ```
 
-6. **Run the Application**
-
+6. **Run the Backend**
    ```bash
    # Development mode
    npm run dev
-
+   
    # Production mode
    npm start
    ```
 
-The server will start on `http://localhost:3000`
+The backend server will start on `http://localhost:3000`
+
+### Frontend Setup
+
+1. **Navigate to frontend directory**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install frontend dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Run the Frontend**
+   ```bash
+   # Development mode
+   npm run dev
+   
+   # Build for production
+   npm run build
+   ```
+
+The frontend will start on `http://localhost:5173`
 
 ## API Documentation
 
 ### Base URL
-
 ```
 http://localhost:3000/api
 ```
 
 ### Authentication
-
 Currently, the API is public. Authentication will be added in future versions.
 
 ### Endpoints
@@ -166,14 +187,12 @@ Upload a CSV file for analysis.
 - **Max Size**: 100MB
 
 **Request Example:**
-
 ```bash
 curl -X POST http://localhost:3000/api/upload \
   -F "file=@your_ad_data.csv"
 ```
 
 **Response:**
-
 ```json
 {
   "success": true,
@@ -194,7 +213,6 @@ curl -X POST http://localhost:3000/api/upload \
 Get the status of an upload/analysis job.
 
 **Response (Processing):**
-
 ```json
 {
   "success": true,
@@ -209,7 +227,6 @@ Get the status of an upload/analysis job.
 ```
 
 **Response (Completed):**
-
 ```json
 {
   "success": true,
@@ -272,7 +289,6 @@ Get detailed analysis results for a completed job.
 Generate enhanced optimization strategies.
 
 **Request Body:**
-
 ```json
 {
   "priority": "high",
@@ -281,7 +297,6 @@ Generate enhanced optimization strategies.
 ```
 
 **Response:**
-
 ```json
 {
   "success": true,
@@ -339,7 +354,6 @@ All endpoints return consistent error responses:
 ```
 
 Common HTTP Status Codes:
-
 - `200` - Success
 - `201` - Created (file upload)
 - `400` - Bad Request (validation errors)
@@ -351,7 +365,6 @@ Common HTTP Status Codes:
 ## Data Processing Pipeline
 
 ### CSV Processing
-
 1. **File Validation**: Type, size, and format validation
 2. **Data Cleaning**: Sanitization and type conversion
 3. **Metric Calculation**: ROAS, ACOS, CTR, CPC, CPM
@@ -359,14 +372,12 @@ Common HTTP Status Codes:
 5. **Trend Analysis**: Pattern recognition and anomaly detection
 
 ### Job Queue System
-
 - **Redis-based**: Scalable job processing
 - **Retry Logic**: Automatic retry with exponential backoff
 - **Progress Tracking**: Real-time progress updates
 - **Error Handling**: Comprehensive error logging and recovery
 
 ### Database Schema
-
 - **analysis_jobs**: Job metadata and status tracking
 - **processed_data**: Raw processed CSV data
 - **analysis_results**: Aggregated analysis results
@@ -375,28 +386,35 @@ Common HTTP Status Codes:
 
 ## Development
 
-### Linting
-
+### Backend Development
 ```bash
+# Linting
 npm run lint
-```
 
-### Development Mode
-
-```bash
+# Development mode
 npm run dev
+
+# Production build
+npm start
 ```
 
-### Production Build
-
+### Frontend Development
 ```bash
-npm start
+cd frontend
+
+# Development mode
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
 ## Deployment
 
 ### Environment Variables
-
 Ensure all environment variables are properly configured for production:
 
 ```env
@@ -408,20 +426,23 @@ REDIS_HOST=your-production-redis-host
 ```
 
 ### Database Migration
-
 Run the schema file on your production database:
-
 ```bash
 psql -h your-db-host -U your-user -d your-db -f src/database/schema.sql
 ```
 
 ### Process Management
-
 Use PM2 or similar process manager:
-
 ```bash
 npm install -g pm2
-pm2 start src/server.js --name "ad-optimize-ai"
+pm2 start src/server.js --name "ad-optimize-ai-backend"
+```
+
+### Frontend Deployment
+Build the frontend for production:
+```bash
+cd frontend
+npm run build
 ```
 
 ## Future Improvements
@@ -452,17 +473,17 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support and questions, please contact:
-
 - Email: hello@aakaarai.com
 - Email: prince@aakaarai.com
 
 ## Changelog
 
 ### v1.0.0
-
 - Initial release
-- CSV file upload and processing
+- Backend API with CSV file upload and processing
 - Basic analysis and optimization generation
 - RESTful API implementation
 - Job queue system
 - Database integration
+- React frontend with Tailwind CSS and shadcn/ui
+- Modern, responsive user interface
