@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 class BaseAgent {
   constructor(agentName) {
     this.agentName = agentName;
-    this.llm = langchainConfig.getLLM();
+    this.llm = langchainConfig.getModel();
     this.logger = logger;
   }
 

@@ -17,7 +17,10 @@ class CSVProcessor {
       'roas',
       'ctr',
       'cpc',
-      'cpm'
+      'cpm',
+      'product_targets',
+      'added_as',
+      'orders'
     ];
 
     // Define a mapping for inconsistent CSV headers to internal field names

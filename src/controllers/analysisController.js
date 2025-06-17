@@ -2,6 +2,7 @@ const logger = require('../utils/logger');
 const jobQueue = require('../services/jobQueue');
 const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
+const { runAgentPipeline } = require('../services/langchain/agents/orchestrator');
 
 class AnalysisController {
   /**
@@ -132,24 +133,31 @@ class AnalysisController {
         });
       }
 
-      // Get current optimization tasks
-      const currentTasks = await this.getOptimizationTasks(id);
+      // Get analysis data for the job
+      const analysisResults = await jobQueue.getAnalysisResults(id);
+      if (!analysisResults || !analysisResults.analysis) {
+        return res.status(404).json({
+          success: false,
+          error: 'Analysis results not found for optimization'
+        });
+      }
 
-      // Generate enhanced optimization strategies
-      const enhancedTasks = await this.enhanceOptimizationTasks(currentTasks, priority, focus_areas);
+      // Run the multi-agent pipeline
+      const agentOutput = await runAgentPipeline(analysisResults.analysis);
+      const agentTasks = (agentOutput.tasks && agentOutput.tasks.tasks) ? agentOutput.tasks.tasks : [];
 
       // Update optimization tasks in database
-      await this.updateOptimizationTasks(id, enhancedTasks);
+      await this.updateOptimizationTasks(id, agentTasks);
 
-      logger.info(`Generated optimization strategies for job ${id}`);
+      logger.info(`Generated optimization strategies for job ${id} using multi-agent pipeline`);
 
       res.json({
         success: true,
         message: 'Optimization strategies generated successfully',
         data: {
           jobId: id,
-          totalTasks: enhancedTasks.length,
-          tasks: enhancedTasks
+          totalTasks: agentTasks.length,
+          tasks: agentTasks
         }
       });
 
