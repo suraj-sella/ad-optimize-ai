@@ -1,17 +1,17 @@
-const BaseAgent = require('../../../agents/baseAgent');
-const promptManager = require('../prompts');
+const BaseAgent = require("../../../agents/baseAgent");
+const promptManager = require("../prompts");
 
 class TaskCreatorAgent extends BaseAgent {
   constructor() {
-    super('TaskCreatorAgent');
+    super("TaskCreatorAgent");
   }
 
   async execute(insightData) {
-    this.logger.info('TaskCreatorAgent creating optimization tasks...');
+    this.logger.info("TaskCreatorAgent creating optimization tasks...");
     // Prepare prompt for LLM
-    const prompt = promptManager.getTemplate('optimization');
+    const prompt = promptManager.getTemplate("optimization");
     const input = {
-      insights: insightData.insights
+      insights: insightData.insights,
     };
     // Call LLM for tasks
     let tasks = [];
@@ -21,22 +21,65 @@ class TaskCreatorAgent extends BaseAgent {
         const result = await chain.invoke({ analysis: JSON.stringify(input) });
         // Try to parse as JSON, fallback to string
         try {
-          tasks = typeof result === 'string' ? JSON.parse(result) : result;
+          const parsedTasks =
+            typeof result === "string" ? JSON.parse(result) : result;
+          // Format tasks for database
+          tasks = Array.isArray(parsedTasks)
+            ? parsedTasks.map((task) => ({
+                type: task.type || "general",
+                priority: task.priority || "medium",
+                description: task.description || "No description provided",
+                impact: task.impact || "medium",
+                action_items: task.action_items || [],
+              }))
+            : [
+                {
+                  type: "general",
+                  priority: "medium",
+                  description: "Failed to parse task format",
+                  impact: "low",
+                  action_items: [],
+                },
+              ];
         } catch (e) {
-          tasks = [result];
+          tasks = [
+            {
+              type: "general",
+              priority: "medium",
+              description: result,
+              impact: "low",
+              action_items: [],
+            },
+          ];
         }
       } else {
-        tasks = ['LLM or prompt not available'];
+        tasks = [
+          {
+            type: "general",
+            priority: "medium",
+            description: "LLM or prompt not available",
+            impact: "low",
+            action_items: [],
+          },
+        ];
       }
     } catch (err) {
-      this.logger.error('LLM call failed:', err);
-      tasks = ['Failed to generate tasks via LLM'];
+      this.logger.error("LLM call failed:", err);
+      tasks = [
+        {
+          type: "general",
+          priority: "medium",
+          description: "Failed to generate tasks via LLM",
+          impact: "low",
+          action_items: [],
+        },
+      ];
     }
     return {
       tasks,
-      raw: insightData
+      raw: insightData,
     };
   }
 }
 
-module.exports = TaskCreatorAgent; 
+module.exports = TaskCreatorAgent;
