@@ -465,6 +465,7 @@ npm run build
 8. **Integration APIs**: Connect with advertising platforms (Google Ads, Facebook Ads)
 9. **Advanced Visualization**: Generate charts and graphs for insights
 10. **Mobile App**: React Native mobile application
+11. **File Storage**: Use AWS S3 Storage for large csv files accumulated over time.
 
 ## Contributing
 

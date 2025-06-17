@@ -19,6 +19,15 @@ class CSVProcessor {
       'cpc',
       'cpm'
     ];
+
+    // Define a mapping for inconsistent CSV headers to internal field names
+    this.headerMap = {
+      'matched product': 'keyword',
+      'spend(usd)': 'cost',
+      'sales(usd)': 'sales',
+      'cpc(usd)': 'cpc',
+      'conversion rate': 'conversions'
+    };
   }
 
   /**
@@ -68,8 +77,22 @@ class CSVProcessor {
 
       // Clean and validate each field
       for (const [key, value] of Object.entries(row)) {
-        const cleanedKey = key.trim().toLowerCase().replace(/\s+/g, '_');
-        cleanedRow[cleanedKey] = this.cleanValue(value);
+        let normalizedKey = key.trim().toLowerCase();
+
+        // Apply specific header mapping
+        if (this.headerMap[normalizedKey]) {
+          normalizedKey = this.headerMap[normalizedKey];
+        } else {
+          // For other headers, convert spaces to underscores
+          normalizedKey = normalizedKey.replace(/\s+/g, '_');
+        }
+        
+        // Ensure the normalized key is one of the supported columns, or ignore
+        if (this.supportedColumns.includes(normalizedKey)) {
+          cleanedRow[normalizedKey] = this.cleanValue(value);
+        } else {
+          logger.warn(`Row ${rowNumber}: Column '${key}' (normalized to '${normalizedKey}') is not a supported column and will be ignored.`);
+        }
       }
 
       // Validate required fields

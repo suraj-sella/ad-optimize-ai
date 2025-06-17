@@ -185,7 +185,7 @@ class AnalysisController {
             WHEN 'medium' THEN 2 
             WHEN 'low' THEN 3 
           END,
-          created_at
+          ot.created_at
       `;
 
       const result = await db.query(query, [jobId]);
@@ -298,8 +298,8 @@ class AnalysisController {
       // Insert new tasks
       if (enhancedTasks.length > 0) {
         const values = enhancedTasks.map((task, index) => {
-          const baseIndex = index * 6; // 6 columns per task
-          return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`;
+          const baseIndex = index * 7; // 7 columns per task
+          return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`;
         }).join(', ');
 
         const query = `
