@@ -54,6 +54,7 @@ Ad Optimize AI is a full-stack application designed to process large CSV files c
 - **Validation**: Joi
 - **Logging**: Winston
 - **Security**: Helmet, CORS, Rate Limiting
+- **AI Integration**: LangChain with HuggingFace (Mistral-7B-Instruct-v0.2)
 
 ### Development Tools
 - **Package Manager**: npm
@@ -67,6 +68,7 @@ Ad Optimize AI is a full-stack application designed to process large CSV files c
 1. **Node.js** (v18 or higher)
 2. **PostgreSQL** (v12 or higher)
 3. **Redis** (v6 or higher)
+4. **HuggingFace Account** with API key
 
 ### Backend Setup
 
@@ -107,6 +109,12 @@ Ad Optimize AI is a full-stack application designed to process large CSV files c
    # File Upload Configuration
    MAX_FILE_SIZE=104857600
    UPLOAD_PATH=./uploads
+
+   # AI Configuration
+   HUGGINGFACE_API_KEY=your_huggingface_api_key
+   LANGCHAIN_TRACING_V2=true
+   LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+   LANGCHAIN_API_KEY=your_langchain_api_key
    ```
 
 4. **Database Setup**
@@ -447,7 +455,7 @@ npm run build
 
 ## Future Improvements
 
-1. **AI Agent Integration**: Implement LangChain agents for advanced analysis
+1. **Enhanced AI Analysis**: Implement more sophisticated HuggingFace models for deeper insights
 2. **Real-time Notifications**: WebSocket support for live progress updates
 3. **Advanced Analytics**: Machine learning models for predictive insights
 4. **Multi-tenant Support**: User authentication and data isolation
@@ -487,3 +495,8 @@ For support and questions, please contact:
 - Database integration
 - React frontend with Tailwind CSS and shadcn/ui
 - Modern, responsive user interface
+
+## Acknowledgments
+
+- [LangChain](https://js.langchain.com/docs/) for AI integration
+- [HuggingFace](https://huggingface.co/) for providing the Mistral-7B-Instruct model
