@@ -3,6 +3,7 @@ const jobQueue = require('../services/jobQueue');
 const db = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 const { runAgentPipeline } = require('../services/langchain/agents/orchestrator');
+const { getJSON, setJSON } = require('../utils/redisClient');
 
 class AnalysisController {
   /**
@@ -11,6 +12,14 @@ class AnalysisController {
   getAnalysis = async (req, res) => {
     try {
       const { id } = req.params;
+
+      // Check cache first
+      const cacheKey = `analysis:${id}`;
+      const cached = await getJSON(cacheKey);
+      if (cached) {
+        logger.info(`Cache hit for analysis:${id}`);
+        return res.json({ success: true, data: cached });
+      }
 
       // Get job status first
       const jobStatus = await jobQueue.getJobStatus(id);
@@ -57,6 +66,18 @@ class AnalysisController {
 
       // Format the response
       const formattedResults = this.formatAnalysisResults(analysisResults);
+
+      // Cache the completed analysis result
+      if (jobStatus.status === 'completed') {
+        await setJSON(cacheKey, {
+          jobId: jobStatus.job_id,
+          filename: jobStatus.filename,
+          status: jobStatus.status,
+          completedAt: jobStatus.completed_at,
+          analysis: formattedResults
+        }, 3600); // 1 hour TTL
+        logger.info(`Cached analysis:${id}`);
+      }
 
       res.json({
         success: true,
