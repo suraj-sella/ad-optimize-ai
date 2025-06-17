@@ -1,9 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, BarChart3, TrendingUp, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { apiService } from '../services/api';
+import React, { useState, useEffect } from "react";
+import {
+  Upload,
+  BarChart3,
+  TrendingUp,
+  FileText,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Badge } from "./ui/badge";
+import { apiService } from "../services/api";
 
 const DashboardScreen = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
@@ -19,13 +33,13 @@ const DashboardScreen = ({ onNavigate }) => {
       setLoading(true);
       const [uploadStats, uploadsResponse] = await Promise.all([
         apiService.getUploadStats(),
-        apiService.listUploads(1, 5)
+        apiService.listUploads(1, 5),
       ]);
-      
+
       setStats(uploadStats.data);
       setRecentUploads(uploadsResponse.data.uploads || []);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error("Error loading dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -33,11 +47,11 @@ const DashboardScreen = ({ onNavigate }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':
+      case "completed":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'processing':
+      case "processing":
         return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'failed':
+      case "failed":
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
@@ -46,17 +60,13 @@ const DashboardScreen = ({ onNavigate }) => {
 
   const getStatusBadge = (status) => {
     const variants = {
-      completed: 'default',
-      processing: 'secondary',
-      failed: 'destructive',
-      pending: 'outline'
+      completed: "default",
+      processing: "secondary",
+      failed: "destructive",
+      pending: "outline",
     };
-    
-    return (
-      <Badge variant={variants[status] || 'outline'}>
-        {status}
-      </Badge>
-    );
+
+    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
   };
 
   if (loading) {
@@ -78,13 +88,10 @@ const DashboardScreen = ({ onNavigate }) => {
           Welcome to Ad Optimize AI
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Upload your advertising data and get intelligent insights to optimize your campaigns
+          Upload your advertising data and get intelligent insights to optimize
+          your campaigns
         </p>
-        <Button 
-          size="lg" 
-          onClick={() => onNavigate('upload')}
-          className="mt-4"
-        >
+        <Button size="lg" onClick={() => onNavigate("upload")} className="mt-4">
           <Upload className="h-5 w-5 mr-2" />
           Upload CSV File
         </Button>
@@ -95,14 +102,16 @@ const DashboardScreen = ({ onNavigate }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Uploads</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Uploads
+              </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                All time uploads
-              </p>
+              <div className="text-2xl font-bold">
+                {stats.totalUploads || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">All time uploads</p>
             </CardContent>
           </Card>
 
@@ -112,7 +121,9 @@ const DashboardScreen = ({ onNavigate }) => {
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completed || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats.completedUploads || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Successful analyses
               </p>
@@ -125,7 +136,9 @@ const DashboardScreen = ({ onNavigate }) => {
               <Clock className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.processing || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats.pendingUploads || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Currently analyzing
               </p>
@@ -138,10 +151,10 @@ const DashboardScreen = ({ onNavigate }) => {
               <AlertCircle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.failed || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Failed uploads
-              </p>
+              <div className="text-2xl font-bold">
+                {stats.failedUploads || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Failed uploads</p>
             </CardContent>
           </Card>
         </div>
@@ -163,10 +176,10 @@ const DashboardScreen = ({ onNavigate }) => {
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No uploads yet</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-4"
-                onClick={() => onNavigate('upload')}
+                onClick={() => onNavigate("upload")}
               >
                 Upload your first file
               </Button>
@@ -174,10 +187,10 @@ const DashboardScreen = ({ onNavigate }) => {
           ) : (
             <div className="space-y-4">
               {recentUploads.map((upload) => (
-                <div 
+                <div
                   key={upload.job_id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => onNavigate('results')}
+                  onClick={() => onNavigate("results")}
                 >
                   <div className="flex items-center space-x-4">
                     {getStatusIcon(upload.status)}
@@ -214,10 +227,7 @@ const DashboardScreen = ({ onNavigate }) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              className="w-full" 
-              onClick={() => onNavigate('upload')}
-            >
+            <Button className="w-full" onClick={() => onNavigate("upload")}>
               Start Upload
             </Button>
           </CardContent>
@@ -234,10 +244,10 @@ const DashboardScreen = ({ onNavigate }) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
-              onClick={() => onNavigate('results')}
+              onClick={() => onNavigate("results")}
             >
               View Results
             </Button>
@@ -248,4 +258,4 @@ const DashboardScreen = ({ onNavigate }) => {
   );
 };
 
-export default DashboardScreen; 
+export default DashboardScreen;

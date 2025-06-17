@@ -64,6 +64,20 @@ router.post('/upload',
 );
 
 /**
+ * @route   GET /api/uploads
+ * @desc    List all uploads with pagination
+ * @access  Public
+ */
+router.get('/uploads', uploadController.listUploads);
+
+/**
+ * @route   GET /api/upload/stats
+ * @desc    Get upload statistics
+ * @access  Public
+ */
+router.get('/upload/stats', uploadController.getUploadStats);
+
+/**
  * @route   GET /api/upload/:jobId
  * @desc    Get upload status
  * @access  Public
@@ -72,13 +86,6 @@ router.get('/upload/:jobId',
   validateJobId,
   uploadController.getUploadStatus
 );
-
-/**
- * @route   GET /api/uploads
- * @desc    List all uploads with pagination
- * @access  Public
- */
-router.get('/uploads', uploadController.listUploads);
 
 /**
  * @route   DELETE /api/upload/:jobId
@@ -91,11 +98,11 @@ router.delete('/upload/:jobId',
 );
 
 /**
- * @route   GET /api/upload/stats
- * @desc    Get upload statistics
+ * @route   GET /api/analysis/stats
+ * @desc    Get analysis statistics
  * @access  Public
  */
-router.get('/upload/stats', uploadController.getUploadStats);
+router.get('/analysis/stats', analysisController.getAnalysisStats);
 
 /**
  * @route   GET /api/analysis/:id
@@ -116,13 +123,6 @@ router.post('/optimize/:id',
   validateJobId,
   analysisController.generateOptimization
 );
-
-/**
- * @route   GET /api/analysis/stats
- * @desc    Get analysis statistics
- * @access  Public
- */
-router.get('/analysis/stats', analysisController.getAnalysisStats);
 
 /**
  * @route   GET /api/health

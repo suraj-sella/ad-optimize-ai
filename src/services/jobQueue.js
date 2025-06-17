@@ -331,61 +331,68 @@ class JobQueue {
   }
 
   /**
-   * Get analysis results
+   * Get analysis results along with associated optimization tasks
    */
   async getAnalysisResults(jobId) {
     try {
-      // Get analysis results
-      const analysisQuery = `
-        SELECT 
+      const query = `
+        SELECT
+          aj.status,
           ar.total_rows,
           ar.processed_rows,
           ar.metrics_summary,
           ar.top_performers,
           ar.bottom_performers,
           ar.trends,
-          ar.created_at
-        FROM analysis_results ar
-        JOIN analysis_jobs aj ON ar.job_id = aj.id
+          ot.task_type,
+          ot.priority,
+          ot.description,
+          ot.action_items,
+          ot.estimated_impact,
+          ot.status as optimization_status
+        FROM analysis_jobs aj
+        LEFT JOIN analysis_results ar ON aj.id = ar.job_id
+        LEFT JOIN optimization_tasks ot ON aj.id = ot.job_id
         WHERE aj.job_id = $1
       `;
 
-      const analysisResult = await db.query(analysisQuery, [jobId]);
+      const result = await db.query(query, [jobId]);
 
-      if (analysisResult.rows.length === 0) {
-        return null;
+      if (result.rows.length === 0) {
+        return null; // Analysis results not found
       }
 
-      // Get optimization tasks
-      const tasksQuery = `
-        SELECT 
-          task_type,
-          priority,
-          description,
-          action_items,
-          estimated_impact,
-          status,
-          created_at
-        FROM optimization_tasks ot
-        JOIN analysis_jobs aj ON ot.job_id = aj.id
-        WHERE aj.job_id = $1
-        ORDER BY 
-          CASE priority 
-            WHEN 'high' THEN 1 
-            WHEN 'medium' THEN 2 
-            WHEN 'low' THEN 3 
-          END,
-          created_at
-      `;
-
-      const tasksResult = await db.query(tasksQuery, [jobId]);
-
-      return {
-        analysis: analysisResult.rows[0],
-        optimizationTasks: tasksResult.rows
+      // Group optimization tasks by analysis job
+      const analysisData = {
+        analysis: {
+          total_rows: result.rows[0].total_rows,
+          processed_rows: result.rows[0].processed_rows,
+          metrics_summary: result.rows[0].metrics_summary,
+          top_performers: result.rows[0].top_performers,
+          bottom_performers: result.rows[0].bottom_performers,
+          trends: result.rows[0].trends,
+          status: result.rows[0].status,
+        },
+        optimizationTasks: [],
       };
+
+      result.rows.forEach(row => {
+        if (row.task_type) {
+          analysisData.optimizationTasks.push({
+            task_type: row.task_type,
+            priority: row.priority,
+            description: row.description,
+            action_items: row.action_items,
+            estimated_impact: row.estimated_impact,
+            status: row.optimization_status, // Use the aliased status here
+          });
+        }
+      });
+
+      return analysisData;
+
     } catch (error) {
-      logger.error(`Error getting analysis results for ${jobId}:`, error);
+      logger.error(`Error getting analysis results for job ${jobId}:`, error);
       throw error;
     }
   }

@@ -9,7 +9,7 @@ class UploadController {
   /**
    * Handle CSV file upload
    */
-  async uploadFile(req, res) {
+  uploadFile = async (req, res) => {
     try {
       const file = req.file;
       
@@ -76,12 +76,12 @@ class UploadController {
         details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
-  }
+  };
 
   /**
    * Create job record in database
    */
-  async createJobRecord(jobId, filename, filePath, fileSize) {
+  createJobRecord = async (jobId, filename, filePath, fileSize) => {
     try {
       const query = `
         INSERT INTO analysis_jobs (job_id, filename, file_path, file_size, status)
@@ -97,12 +97,12 @@ class UploadController {
       logger.error('Error creating job record:', error);
       throw error;
     }
-  }
+  };
 
   /**
    * Get upload status
    */
-  async getUploadStatus(req, res) {
+  getUploadStatus = async (req, res) => {
     try {
       const { jobId } = req.params;
 
@@ -137,12 +137,12 @@ class UploadController {
         details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
-  }
+  };
 
   /**
    * List all uploads
    */
-  async listUploads(req, res) {
+  listUploads = async (req, res) => {
     try {
       const { page = 1, limit = 10, status } = req.query;
       const offset = (page - 1) * limit;
@@ -201,43 +201,44 @@ class UploadController {
         details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
-  }
+  };
 
   /**
    * Delete upload and associated data
    */
-  async deleteUpload(req, res) {
+  deleteUpload = async (req, res) => {
     try {
       const { jobId } = req.params;
 
-      // Get job details
-      const jobQuery = 'SELECT file_path FROM analysis_jobs WHERE job_id = $1';
-      const jobResult = await db.query(jobQuery, [jobId]);
+      // Delete job record from database
+      const deleteJobQuery = 'DELETE FROM analysis_jobs WHERE job_id = $1 RETURNING file_path';
+      const jobResult = await db.query(deleteJobQuery, [jobId]);
 
       if (jobResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Job not found'
+          error: 'Job not found',
+          message: 'No upload found with the provided ID.'
         });
       }
 
       const filePath = jobResult.rows[0].file_path;
 
-      // Delete file if it exists
+      // Remove file from uploads directory
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         logger.info(`Deleted file: ${filePath}`);
       }
 
-      // Delete job and associated data (cascade will handle related records)
-      const deleteQuery = 'DELETE FROM analysis_jobs WHERE job_id = $1';
-      await db.query(deleteQuery, [jobId]);
+      // Remove job from queue (if still pending/active)
+      await jobQueue.removeJob(jobId);
 
-      logger.info(`Deleted job and associated data for job ID: ${jobId}`);
+      logger.info(`Upload and associated data deleted for Job ID: ${jobId}`);
 
       res.json({
         success: true,
-        message: 'Upload deleted successfully'
+        message: 'Upload and associated data deleted successfully.',
+        data: { jobId }
       });
 
     } catch (error) {
@@ -248,64 +249,37 @@ class UploadController {
         details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
-  }
+  };
 
   /**
    * Get upload statistics
    */
-  async getUploadStats(req, res) {
+  getUploadStats = async (req, res) => {
     try {
-      const statsQuery = `
-        SELECT 
-          status,
-          COUNT(*) as count,
-          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) as avg_processing_time
-        FROM analysis_jobs 
-        GROUP BY status
-      `;
-
-      const result = await db.query(statsQuery);
-
-      const stats = {
-        total: 0,
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        failed: 0,
-        avgProcessingTime: 0
-      };
-
-      let totalProcessingTime = 0;
-      let completedCount = 0;
-
-      result.rows.forEach(row => {
-        stats[row.status] = parseInt(row.count);
-        stats.total += parseInt(row.count);
-        
-        if (row.status === 'completed' && row.avg_processing_time) {
-          totalProcessingTime += parseFloat(row.avg_processing_time);
-          completedCount += parseInt(row.count);
-        }
-      });
-
-      if (completedCount > 0) {
-        stats.avgProcessingTime = Math.round(totalProcessingTime / completedCount);
-      }
+      const totalUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs');
+      const pendingUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'pending\'');
+      const completedUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'completed\'');
+      const failedUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'failed\'');
 
       res.json({
         success: true,
-        data: stats
+        data: {
+          totalUploads: parseInt(totalUploadsResult.rows[0].count),
+          pendingUploads: parseInt(pendingUploadsResult.rows[0].count),
+          completedUploads: parseInt(completedUploadsResult.rows[0].count),
+          failedUploads: parseInt(failedUploadsResult.rows[0].count),
+        }
       });
 
     } catch (error) {
-      logger.error('Error getting upload stats:', error);
+      logger.error('Error getting upload statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get upload statistics',
         details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
-  }
+  };
 }
 
 module.exports = new UploadController(); 

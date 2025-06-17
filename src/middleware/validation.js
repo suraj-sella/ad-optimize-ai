@@ -7,12 +7,15 @@ const logger = require('../utils/logger');
 const schemas = {
   // File upload validation
   uploadFile: Joi.object({
-    file: Joi.object({
-      originalname: Joi.string().required(),
-      mimetype: Joi.string().valid('text/csv', 'application/csv').required(),
-      size: Joi.number().max(parseInt(process.env.MAX_FILE_SIZE) || 104857600).required()
-    }).required()
-  }),
+    originalname: Joi.string().required(),
+    mimetype: Joi.string().valid('text/csv', 'application/csv').required(),
+    size: Joi.number().max(parseInt(process.env.MAX_FILE_SIZE) || 104857600).required(),
+    fieldname: Joi.string().optional(),
+    encoding: Joi.string().optional(),
+    destination: Joi.string().optional(),
+    filename: Joi.string().optional(),
+    path: Joi.string().optional(),
+  }).unknown(true),
 
   // Job ID validation
   jobId: Joi.object({
@@ -59,7 +62,7 @@ const validateFileUpload = (req, res, next) => {
     });
   }
 
-  const { error } = schemas.uploadFile.validate({ file: req.file });
+  const { error } = schemas.uploadFile.validate(req.file);
   
   if (error) {
     logger.warn(`File validation error: ${error.details[0].message}`);
