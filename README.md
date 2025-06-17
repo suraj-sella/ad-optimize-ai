@@ -453,6 +453,23 @@ cd frontend
 npm run build
 ```
 
+## Docker Containerization (Optional)
+
+You can run the backend in a Docker container for production or testing. For local development, continue using your usual method (`npm run dev`).
+
+### Build the Docker image
+```bash
+docker build -t ad-optimize-ai-backend .
+```
+
+### Run the container
+```bash
+docker run -d --name ad-optimize-ai-backend -p 3000:3000 --env-file .env ad-optimize-ai-backend
+```
+
+- Make sure your `.env` file is present and configured.
+- The backend will be available at `http://localhost:3000` inside the container.
+
 ## Future Improvements
 
 1. **Enhanced AI Analysis**: Implement more sophisticated HuggingFace models for deeper insights
