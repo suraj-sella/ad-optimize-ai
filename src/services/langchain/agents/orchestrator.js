@@ -27,14 +27,18 @@ async function runAgentPipeline(csvData) {
     // 3. Task creation
     const taskResult = await taskCreator.execute(insightResult);
 
+    // Determine if AI was used for both insights and tasks
+    const aiGenerated = (insightResult.aiGenerated !== false) && (taskResult.aiGenerated !== false);
+
     return {
       analysis: analysisResult,
       insights: insightResult,
-      tasks: taskResult
+      tasks: taskResult,
+      aiGenerated
     };
   } catch (error) {
     // Handle errors gracefully
-    return { error: error.message };
+    return { error: error.message, aiGenerated: false };
   }
 }
 

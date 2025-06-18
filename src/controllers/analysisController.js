@@ -68,6 +68,7 @@ class AnalysisController {
 
       // Format the response
       const formattedResults = this.formatAnalysisResults(analysisResults);
+      const aiGenerated = analysisResults.aiGenerated !== false;
 
       // Cache the completed analysis result
       if (jobStatus.status === "completed") {
@@ -79,6 +80,7 @@ class AnalysisController {
             status: jobStatus.status,
             completedAt: jobStatus.completed_at,
             analysis: formattedResults,
+            aiGenerated,
           },
           3600
         ); // 1 hour TTL
@@ -93,6 +95,7 @@ class AnalysisController {
           status: jobStatus.status,
           completedAt: jobStatus.completed_at,
           analysis: formattedResults,
+          aiGenerated,
         },
       });
     } catch (error) {
@@ -112,7 +115,7 @@ class AnalysisController {
    * Format analysis results for API response
    */
   formatAnalysisResults = (results) => {
-    const { analysis, optimizationTasks } = results;
+    const { analysis, optimizationTasks, aiGenerated } = results;
 
     return {
       summary: {
@@ -136,6 +139,7 @@ class AnalysisController {
         estimatedImpact: task.estimated_impact,
         status: task.status,
       })),
+      aiGenerated: aiGenerated !== false,
     };
   };
 
@@ -183,6 +187,7 @@ class AnalysisController {
         agentOutput.tasks && agentOutput.tasks.tasks
           ? agentOutput.tasks.tasks
           : [];
+      const aiGenerated = agentOutput.aiGenerated !== false;
 
       // Update optimization tasks in database
       await this.updateOptimizationTasks(id, agentTasks);
@@ -201,6 +206,7 @@ class AnalysisController {
           jobId: id,
           totalTasks: agentTasks.length,
           tasks: agentTasks,
+          aiGenerated,
         },
       });
     } catch (error) {

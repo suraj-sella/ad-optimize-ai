@@ -17,6 +17,7 @@ class InsightGeneratorAgent extends BaseAgent {
     };
     // Call LLM for insights
     let insights = [];
+    let aiGenerated = true;
     try {
       if (this.llm && prompt) {
         const chain = prompt.pipe(this.llm);
@@ -29,14 +30,17 @@ class InsightGeneratorAgent extends BaseAgent {
         }
       } else {
         insights = ['LLM or prompt not available'];
+        aiGenerated = false;
       }
     } catch (err) {
       this.logger.error('LLM call failed:', err);
       insights = ['Failed to generate insights via LLM'];
+      aiGenerated = false;
     }
     return {
       insights,
-      raw: analysisData
+      raw: analysisData,
+      aiGenerated
     };
   }
 }

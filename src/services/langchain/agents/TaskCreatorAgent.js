@@ -15,6 +15,7 @@ class TaskCreatorAgent extends BaseAgent {
     };
     // Call LLM for tasks
     let tasks = [];
+    let aiGenerated = true;
     try {
       if (this.llm && prompt) {
         const chain = prompt.pipe(this.llm);
@@ -62,6 +63,7 @@ class TaskCreatorAgent extends BaseAgent {
             action_items: [],
           },
         ];
+        aiGenerated = false;
       }
     } catch (err) {
       this.logger.error("LLM call failed:", err);
@@ -74,10 +76,12 @@ class TaskCreatorAgent extends BaseAgent {
           action_items: [],
         },
       ];
+      aiGenerated = false;
     }
     return {
       tasks,
       raw: insightData,
+      aiGenerated
     };
   }
 }
