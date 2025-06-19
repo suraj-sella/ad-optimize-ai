@@ -78,21 +78,21 @@ router.get('/uploads', uploadController.listUploads);
 router.get('/upload/stats', uploadController.getUploadStats);
 
 /**
- * @route   GET /api/upload/:jobId
+ * @route   GET /api/upload/:id
  * @desc    Get upload status
  * @access  Public
  */
-router.get('/upload/:jobId',
+router.get('/upload/:id',
   validateJobId,
   uploadController.getUploadStatus
 );
 
 /**
- * @route   DELETE /api/upload/:jobId
+ * @route   DELETE /api/upload/:id
  * @desc    Delete upload and associated data
  * @access  Public
  */
-router.delete('/upload/:jobId',
+router.delete('/upload/:id',
   validateJobId,
   uploadController.deleteUpload
 );
@@ -154,9 +154,9 @@ router.get('/info', (req, res) => {
       endpoints: {
         upload: {
           'POST /api/upload': 'Upload CSV file for analysis',
-          'GET /api/upload/:jobId': 'Get upload status',
+          'GET /api/upload/:id': 'Get upload status',
           'GET /api/uploads': 'List all uploads',
-          'DELETE /api/upload/:jobId': 'Delete upload',
+          'DELETE /api/upload/:id': 'Delete upload',
           'GET /api/upload/stats': 'Get upload statistics'
         },
         analysis: {

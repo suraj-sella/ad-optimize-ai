@@ -43,12 +43,12 @@ const ResultsScreen = ({ jobId }) => {
   };
 
   const pollForUpdates = async () => {
+    let fetchingFinal = false;
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiService.getAnalysis(jobId);
-        
+        setAnalysisData((prev) => ({ ...prev, ...response.data }));
         if (response.data.status === 'completed') {
-          setAnalysisData(response.data);
           setLoading(false);
           setPolling(false);
           clearInterval(pollInterval);
@@ -57,13 +57,26 @@ const ResultsScreen = ({ jobId }) => {
           setLoading(false);
           setPolling(false);
           clearInterval(pollInterval);
+        } else if (
+          response.data.progress === 100 &&
+          response.data.status !== 'completed' &&
+          !fetchingFinal
+        ) {
+          // Immediately fetch one more time to get the completed result
+          fetchingFinal = true;
+          const finalResponse = await apiService.getAnalysis(jobId);
+          setAnalysisData((prev) => ({ ...prev, ...finalResponse.data }));
+          if (finalResponse.data.status === 'completed') {
+            setLoading(false);
+            setPolling(false);
+            clearInterval(pollInterval);
+          }
         }
       } catch (error) {
         console.error('Polling error:', error);
       }
-    }, 5000); // Poll every 5 seconds
+    }, 5000);
 
-    // Cleanup interval after 10 minutes
     setTimeout(() => {
       clearInterval(pollInterval);
       setPolling(false);
@@ -101,7 +114,7 @@ const ResultsScreen = ({ jobId }) => {
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">
-            {polling ? 'Analyzing your data...' : 'Loading results...'}
+            {polling ? (analysisData?.message || 'Analyzing your data...') : 'Loading results...'}
           </p>
           {polling && (
             <div className="w-64 mx-auto">

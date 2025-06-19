@@ -242,7 +242,7 @@ Get the status of an upload/analysis job.
     "jobId": "550e8400-e29b-41d4-a716-446655440000",
     "filename": "your_ad_data.csv",
     "status": "completed",
-    "completedAt": "2024-01-15T10:30:00Z",
+    "completedAt": "2025-01-15T10:30:00Z",
     "analysis": {
       "summary": {
         "totalRows": 1000,

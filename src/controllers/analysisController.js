@@ -42,7 +42,7 @@ class AnalysisController {
             filename: jobStatus.filename,
             status: jobStatus.status,
             progress: jobStatus.progress,
-            message: "Analysis is still in progress",
+            message: jobStatus.message || "Analysis is still in progress",
           },
         });
       }

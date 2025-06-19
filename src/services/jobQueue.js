@@ -7,9 +7,9 @@ class JobQueue {
   constructor() {
     this.analysisQueue = new Queue("csv-analysis", {
       redis: {
-        host: process.env.REDIS_HOST || "localhost",
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD || undefined,
+        host: process.env.REDIS_HOST,
+        port: process.env.REDIS_PORT,
+        password: process.env.REDIS_PASSWORD,
       },
     });
 
@@ -46,6 +46,7 @@ class JobQueue {
 
     // Process jobs
     this.analysisQueue.process("analyze-csv", async (job) => {
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       return await this.processCSVJob(job);
     });
   }
@@ -85,29 +86,36 @@ class JobQueue {
       logger.info(`Starting CSV analysis for job ${jobId}, file: ${filename}`);
 
       // Update job status to processing
-      await this.updateJobStatus(jobId, "processing", 0);
+      await this.updateJobStatus(jobId, "processing", 0, null, null, "Starting analysis");
 
       // Report progress
       job.progress(10);
-
+      await this.updateJobProgress(jobId, 10, "Processing CSV file");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       // Process CSV file
       const processedData = await csvProcessor.processCSV(filePath);
 
       job.progress(50);
-
+      await this.updateJobProgress(jobId, 50, "Storing processed data");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       // Store processed data in database
       await this.storeProcessedData(jobId, processedData.data);
 
       job.progress(70);
-
+      await this.updateJobProgress(jobId, 70, "Generating analysis");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       // Generate analysis
       const analysis = csvProcessor.generateAnalysis(processedData.data);
 
-      job.progress(100);
-
+      job.progress(80);
+      await this.updateJobProgress(jobId, 80, "Storing analysis results");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       // Store analysis results
       await this.storeAnalysisResults(jobId, processedData, analysis);
 
+      job.progress(90);
+      await this.updateJobProgress(jobId, 90, "Storing historical data");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
       // Store historical data for trend analysis
       await this.storeHistoricalData(jobId, {
         date_range: {
@@ -118,6 +126,9 @@ class JobQueue {
       });
 
       logger.info(`CSV analysis completed for job ${jobId}`);
+      job.progress(100);
+      await this.updateJobProgress(jobId, 100, "Analysis complete");
+      // await new Promise((resolve) => setTimeout(resolve, 5000));
 
       return {
         success: true,
@@ -139,7 +150,8 @@ class JobQueue {
     status,
     progress = null,
     errorMessage = null,
-    result = null
+    result = null,
+    message = null
   ) {
     try {
       const updateFields = ["status = $1"];
@@ -149,6 +161,11 @@ class JobQueue {
       if (progress !== null) {
         updateFields.push(`progress = $${paramIndex++}`);
         values.push(progress);
+      }
+
+      if (message !== null) {
+        updateFields.push(`message = $${paramIndex++}`);
+        values.push(message);
       }
 
       if (errorMessage !== null) {
@@ -178,14 +195,25 @@ class JobQueue {
   /**
    * Update job progress in database
    */
-  async updateJobProgress(jobId, progress) {
+  async updateJobProgress(jobId, progress, message = null) {
     try {
-      const query = `
-        UPDATE analysis_jobs 
-        SET progress = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE job_id = $2
-      `;
-      await db.query(query, [progress, jobId]);
+      let query, params;
+      if (message !== null) {
+        query = `
+          UPDATE analysis_jobs 
+          SET progress = $1, message = $2, updated_at = CURRENT_TIMESTAMP
+          WHERE job_id = $3
+        `;
+        params = [progress, message, jobId];
+      } else {
+        query = `
+          UPDATE analysis_jobs 
+          SET progress = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE job_id = $2
+        `;
+        params = [progress, jobId];
+      }
+      await db.query(query, params);
     } catch (error) {
       logger.error(`Error updating job progress for ${jobId}:`, error);
     }
@@ -380,6 +408,7 @@ class JobQueue {
           filename,
           status,
           progress,
+          message,
           error_message,
           created_at,
           updated_at,
@@ -482,6 +511,28 @@ class JobQueue {
       logger.info(`Cleaned up ${result.rowCount} old jobs`);
     } catch (error) {
       logger.error("Error cleaning up old jobs:", error);
+    }
+  }
+
+  /**
+   * Remove a job from the queue by jobId (if it exists and is not completed)
+   */
+  async removeJob(jobId) {
+    try {
+      // Bull job IDs are numeric, but we use our own jobId as job.data.jobId
+      const jobs = await this.analysisQueue.getJobs(['waiting', 'active', 'delayed', 'paused']);
+      for (const job of jobs) {
+        if (job.data && job.data.jobId === jobId) {
+          await job.remove();
+          logger.info(`Removed job ${jobId} from queue`);
+          return true;
+        }
+      }
+      logger.info(`No active queue job found for jobId ${jobId} (may already be processed or removed)`);
+      return false;
+    } catch (error) {
+      logger.error(`Error removing job ${jobId} from queue:`, error);
+      return false;
     }
   }
 }

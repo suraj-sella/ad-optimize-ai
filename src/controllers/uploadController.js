@@ -1,9 +1,9 @@
-const { v4: uuidv4 } = require('uuid');
-const path = require('path');
-const fs = require('fs');
-const logger = require('../utils/logger');
-const db = require('../config/database');
-const jobQueue = require('../services/jobQueue');
+const { v4: uuidv4 } = require("uuid");
+const path = require("path");
+const fs = require("fs");
+const logger = require("../utils/logger");
+const db = require("../config/database");
+const jobQueue = require("../services/jobQueue");
 
 class UploadController {
   /**
@@ -12,19 +12,19 @@ class UploadController {
   uploadFile = async (req, res) => {
     try {
       const file = req.file;
-      
+
       if (!file) {
         return res.status(400).json({
           success: false,
-          error: 'No file uploaded'
+          error: "No file uploaded",
         });
       }
 
       // Generate unique job ID
       const jobId = uuidv4();
-      
+
       // Create uploads directory if it doesn't exist
-      const uploadDir = process.env.UPLOAD_PATH || './uploads';
+      const uploadDir = process.env.UPLOAD_PATH || "./uploads";
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -45,26 +45,27 @@ class UploadController {
       const queueJobId = await jobQueue.addAnalysisJob({
         jobId,
         filePath,
-        filename: file.originalname
+        filename: file.originalname,
       });
 
-      logger.info(`File upload successful. Job ID: ${jobId}, Queue Job ID: ${queueJobId}`);
+      logger.info(
+        `File upload successful. Job ID: ${jobId}, Queue Job ID: ${queueJobId}`
+      );
 
       res.status(201).json({
         success: true,
-        message: 'File uploaded successfully',
+        message: "File uploaded successfully",
         data: {
           jobId,
           filename: file.originalname,
           fileSize: file.size,
-          status: 'pending',
-          estimatedProcessingTime: '2-5 minutes'
-        }
+          status: "pending",
+          estimatedProcessingTime: "2-5 minutes",
+        },
       });
-
     } catch (error) {
-      logger.error('Error in file upload:', error);
-      
+      logger.error("Error in file upload:", error);
+
       // Clean up uploaded file if it exists
       if (req.file && req.file.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
@@ -72,8 +73,11 @@ class UploadController {
 
       res.status(500).json({
         success: false,
-        error: 'Failed to upload file',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: "Failed to upload file",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   };
@@ -89,12 +93,17 @@ class UploadController {
         RETURNING id
       `;
 
-      const result = await db.query(query, [jobId, filename, filePath, fileSize]);
-      
+      const result = await db.query(query, [
+        jobId,
+        filename,
+        filePath,
+        fileSize,
+      ]);
+
       logger.info(`Created job record with ID: ${result.rows[0].id}`);
       return result.rows[0].id;
     } catch (error) {
-      logger.error('Error creating job record:', error);
+      logger.error("Error creating job record:", error);
       throw error;
     }
   };
@@ -104,14 +113,14 @@ class UploadController {
    */
   getUploadStatus = async (req, res) => {
     try {
-      const { jobId } = req.params;
+      const { id } = req.params;
 
-      const jobStatus = await jobQueue.getJobStatus(jobId);
+      const jobStatus = await jobQueue.getJobStatus(id);
 
       if (!jobStatus) {
         return res.status(404).json({
           success: false,
-          error: 'Job not found'
+          error: "Job not found",
         });
       }
 
@@ -125,16 +134,18 @@ class UploadController {
           errorMessage: jobStatus.error_message,
           createdAt: jobStatus.created_at,
           updatedAt: jobStatus.updated_at,
-          completedAt: jobStatus.completed_at
-        }
+          completedAt: jobStatus.completed_at,
+        },
       });
-
     } catch (error) {
-      logger.error('Error getting upload status:', error);
+      logger.error("Error getting upload status:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get upload status',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: "Failed to get upload status",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   };
@@ -174,9 +185,9 @@ class UploadController {
       const result = await db.query(query, queryParams);
 
       // Get total count
-      let countQuery = 'SELECT COUNT(*) FROM analysis_jobs';
+      let countQuery = "SELECT COUNT(*) FROM analysis_jobs";
       if (status) {
-        countQuery += ' WHERE status = $1';
+        countQuery += " WHERE status = $1";
       }
       const countResult = await db.query(countQuery, status ? [status] : []);
 
@@ -188,17 +199,19 @@ class UploadController {
             page: parseInt(page),
             limit: parseInt(limit),
             total: parseInt(countResult.rows[0].count),
-            totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit)
-          }
-        }
+            totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
+          },
+        },
       });
-
     } catch (error) {
-      logger.error('Error listing uploads:', error);
+      logger.error("Error listing uploads:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to list uploads',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: "Failed to list uploads",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   };
@@ -208,17 +221,19 @@ class UploadController {
    */
   deleteUpload = async (req, res) => {
     try {
-      const { jobId } = req.params;
+      console.log(req.params);
+      const { id } = req.params;
 
       // Delete job record from database
-      const deleteJobQuery = 'DELETE FROM analysis_jobs WHERE job_id = $1 RETURNING file_path';
-      const jobResult = await db.query(deleteJobQuery, [jobId]);
+      const deleteJobQuery =
+        "DELETE FROM analysis_jobs WHERE job_id = $1 RETURNING file_path";
+      const jobResult = await db.query(deleteJobQuery, [id]);
 
       if (jobResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Job not found',
-          message: 'No upload found with the provided ID.'
+          error: "Job not found",
+          message: "No upload found with the provided ID.",
         });
       }
 
@@ -231,22 +246,24 @@ class UploadController {
       }
 
       // Remove job from queue (if still pending/active)
-      await jobQueue.removeJob(jobId);
+      await jobQueue.removeJob(id);
 
-      logger.info(`Upload and associated data deleted for Job ID: ${jobId}`);
+      logger.info(`Upload and associated data deleted for Job ID: ${id}`);
 
       res.json({
         success: true,
-        message: 'Upload and associated data deleted successfully.',
-        data: { jobId }
+        message: "Upload and associated data deleted successfully.",
+        data: { id },
       });
-
     } catch (error) {
-      logger.error('Error deleting upload:', error);
+      logger.error("Error deleting upload:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to delete upload',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: "Failed to delete upload",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   };
@@ -256,10 +273,18 @@ class UploadController {
    */
   getUploadStats = async (req, res) => {
     try {
-      const totalUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs');
-      const pendingUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'pending\'');
-      const completedUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'completed\'');
-      const failedUploadsResult = await db.query('SELECT COUNT(*) FROM analysis_jobs WHERE status = \'failed\'');
+      const totalUploadsResult = await db.query(
+        "SELECT COUNT(*) FROM analysis_jobs"
+      );
+      const pendingUploadsResult = await db.query(
+        "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'pending'"
+      );
+      const completedUploadsResult = await db.query(
+        "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'completed'"
+      );
+      const failedUploadsResult = await db.query(
+        "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'failed'"
+      );
 
       res.json({
         success: true,
@@ -268,18 +293,20 @@ class UploadController {
           pendingUploads: parseInt(pendingUploadsResult.rows[0].count),
           completedUploads: parseInt(completedUploadsResult.rows[0].count),
           failedUploads: parseInt(failedUploadsResult.rows[0].count),
-        }
+        },
       });
-
     } catch (error) {
-      logger.error('Error getting upload statistics:', error);
+      logger.error("Error getting upload statistics:", error);
       res.status(500).json({
         success: false,
-        error: 'Failed to get upload statistics',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: "Failed to get upload statistics",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
       });
     }
   };
 }
 
-module.exports = new UploadController(); 
+module.exports = new UploadController();

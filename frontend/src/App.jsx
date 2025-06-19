@@ -26,7 +26,14 @@ function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DashboardScreen onNavigate={setCurrentScreen} />;
+        return <DashboardScreen onNavigate={(screen, jobId) => {
+          if (screen === "results" && jobId) {
+            setCurrentJobId(jobId);
+            setCurrentScreen("results");
+          } else {
+            setCurrentScreen(screen);
+          }
+        }} />;
       case "upload":
         return (
           <UploadScreen
@@ -96,7 +103,7 @@ function App() {
       <footer className="border-t bg-card mt-auto">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div>© 2024 Ad Optimize AI. All rights reserved.</div>
+            <div>© 2025 Ad Optimize AI. All rights reserved.</div>
             <div className="flex items-center space-x-4">
               <span>Powered by AI</span>
               <span>•</span>

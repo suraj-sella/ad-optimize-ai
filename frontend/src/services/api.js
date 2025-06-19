@@ -26,7 +26,7 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.config.url);
+    // console.log('API Response:', response.status, response.config.url);
     return response;
   },
   (error) => {
@@ -92,6 +92,12 @@ export const apiService = {
   // Health check
   healthCheck: async () => {
     const response = await api.get('/health');
+    return response.data;
+  },
+
+  // Delete upload
+  deleteUpload: async (jobId) => {
+    const response = await api.delete(`/upload/${jobId}`);
     return response.data;
   },
 };

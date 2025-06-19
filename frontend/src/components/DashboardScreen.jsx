@@ -7,6 +7,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -23,6 +24,7 @@ const DashboardScreen = ({ onNavigate }) => {
   const [stats, setStats] = useState(null);
   const [recentUploads, setRecentUploads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingJobId, setDeletingJobId] = useState(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -67,6 +69,23 @@ const DashboardScreen = ({ onNavigate }) => {
     };
 
     return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+  };
+
+  const handleDeleteUpload = async (jobId) => {
+    if (!window.confirm("Are you sure you want to delete this upload and all associated data? This action cannot be undone.")) {
+      return;
+    }
+    setDeletingJobId(jobId);
+    try {
+      await apiService.deleteUpload(jobId);
+      setRecentUploads((prev) => prev.filter((u) => u.job_id !== jobId));
+      // Optionally reload stats
+      loadDashboardData();
+    } catch (error) {
+      alert("Failed to delete upload. Please try again.");
+    } finally {
+      setDeletingJobId(null);
+    }
   };
 
   if (loading) {
@@ -190,7 +209,7 @@ const DashboardScreen = ({ onNavigate }) => {
                 <div
                   key={upload.job_id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => onNavigate("results")}
+                  onClick={() => onNavigate("results", upload.job_id)}
                 >
                   <div className="flex items-center space-x-4">
                     {getStatusIcon(upload.status)}
@@ -206,6 +225,22 @@ const DashboardScreen = ({ onNavigate }) => {
                     <p className="text-sm text-muted-foreground">
                       {new Date(upload.created_at).toLocaleDateString()}
                     </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={deletingJobId === upload.job_id}
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDeleteUpload(upload.job_id);
+                      }}
+                      title="Delete upload"
+                    >
+                      {deletingJobId === upload.job_id ? (
+                        <span className="animate-spin"><Trash2 className="h-4 w-4 text-red-500" /></span>
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      )}
+                    </Button>
                   </div>
                 </div>
               ))}
