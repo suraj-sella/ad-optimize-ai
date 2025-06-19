@@ -72,41 +72,62 @@ class CSVProcessor {
   }
 
   /**
-   * Validate and clean individual row data
+   * Validate and clean individual row data (advanced validation)
    */
   validateAndCleanRow(row, rowNumber) {
     try {
       const cleanedRow = {};
-
+      const numericFields = [
+        'impressions', 'clicks', 'cost', 'sales', 'conversions',
+        'acos', 'roas', 'ctr', 'cpc', 'cpm', 'orders'
+      ];
       // Clean and validate each field
       for (const [key, value] of Object.entries(row)) {
         let normalizedKey = key.trim().toLowerCase();
-
         // Apply specific header mapping
         if (this.headerMap[normalizedKey]) {
           normalizedKey = this.headerMap[normalizedKey];
         } else {
-          // For other headers, convert spaces to underscores
           normalizedKey = normalizedKey.replace(/\s+/g, '_');
         }
-        
-        // Ensure the normalized key is one of the supported columns, or ignore
         if (this.supportedColumns.includes(normalizedKey)) {
           cleanedRow[normalizedKey] = this.cleanValue(value);
         } else {
           logger.warn(`Row ${rowNumber}: Column '${key}' (normalized to '${normalizedKey}') is not a supported column and will be ignored.`);
         }
       }
-
+      // Set missing non-required numeric fields to 0
+      for (const field of numericFields) {
+        if (!(field in cleanedRow) || cleanedRow[field] === null || cleanedRow[field] === undefined || cleanedRow[field] === '') {
+          cleanedRow[field] = 0;
+        }
+      }
       // Validate required fields
       if (!this.hasRequiredFields(cleanedRow)) {
         logger.warn(`Row ${rowNumber}: Missing required fields`);
         return null;
       }
-
+      // Advanced integrity checks
+      // 1. All numeric fields must be non-negative
+      for (const field of numericFields) {
+        if (typeof cleanedRow[field] === 'number' && cleanedRow[field] < 0) {
+          logger.warn(`Row ${rowNumber}: Field '${field}' has negative value (${cleanedRow[field]}). Row skipped.`);
+          return null;
+        }
+      }
+      // 2. Logical consistency: impressions >= clicks
+      if (cleanedRow.impressions < cleanedRow.clicks) {
+        logger.warn(`Row ${rowNumber}: Clicks (${cleanedRow.clicks}) exceed impressions (${cleanedRow.impressions}). Row skipped.`);
+        return null;
+      }
+      // 3. Outlier detection (optional, simple):
+      // If impressions or clicks are extremely high, flag as outlier (e.g., > 1,000,000)
+      if (cleanedRow.impressions > 1_000_000 || cleanedRow.clicks > 1_000_000) {
+        logger.warn(`Row ${rowNumber}: Impressions or clicks are extremely high (impressions: ${cleanedRow.impressions}, clicks: ${cleanedRow.clicks}). Row skipped as outlier.`);
+        return null;
+      }
       // Calculate additional metrics
       const enrichedRow = this.calculateMetrics(cleanedRow);
-      
       return enrichedRow;
     } catch (error) {
       logger.error(`Error processing row ${rowNumber}:`, error);
