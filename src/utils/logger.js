@@ -26,14 +26,18 @@ const logger = winston.createLogger({
   ],
 });
 
-// If we're not in production, log to the console as well
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-}
+// Always log to the console (Railway captures stdout)
+logger.add(new winston.transports.Console({
+  format: process.env.NODE_ENV === 'production'
+    ? winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+      )
+    : winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+}));
 
 module.exports = logger; 
