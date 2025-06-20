@@ -3,7 +3,8 @@ const logger = require('./logger');
 
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
-  password: process.env.REDIS_PASSWORD || undefined
+  password: process.env.REDIS_PASSWORD || undefined,
+  family: 0 // Enable dual stack (IPv4 + IPv6) for Railway compatibility
 });
 
 redisClient.on('error', (err) => logger.error('Redis Client Error', err));
