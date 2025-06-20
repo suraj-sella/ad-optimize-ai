@@ -41,7 +41,7 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? ["https://ad-optimize-ai.up.railway.app/"]
+        ? ["https://ad-optimize-ai.up.railway.app"]
         : [
             "http://localhost:3000",
             "http://localhost:3001",
