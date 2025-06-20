@@ -1,0 +1,51 @@
+{
+  "name": "ad-optimize-ai-backend",
+  "version": "1.0.0",
+  "description": "Backend for AI-powered ad optimization platform",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "ad-optimization",
+    "ai",
+    "backend",
+    "express",
+    "csv-processing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@huggingface/inference": "^2.8.1",
+    "@langchain/anthropic": "^0.3.22",
+    "@langchain/community": "^0.3.46",
+    "@langchain/core": "^0.3.59",
+    "@langchain/openai": "^0.5.13",
+    "axios": "^1.10.0",
+    "bull": "^4.12.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "form-data": "^4.0.3",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "langchain": "^0.3.28",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.3",
+    "redis": "^4.7.1",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0",
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

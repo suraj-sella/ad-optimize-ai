@@ -122,7 +122,6 @@ Thumbs.db
 uploads/
 *.xlsx
 *.xls
-*.json
 data/
 
 # Database files
