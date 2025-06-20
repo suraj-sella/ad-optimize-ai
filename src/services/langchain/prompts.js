@@ -34,7 +34,7 @@ class PromptManager {
         3. Priority level
         4. Implementation difficulty
         
-        Format your response as a JSON array. Each array element should be an object with the following fields: recommendation, impact, priority, and difficulty. Do not wrap the array in an outer object.
+        Format your response as a JSON array of 5 items. Each array element should be an object with the following fields: recommendation, impact, priority, and difficulty. Do not wrap the array in an outer object.
       `);
 
       logger.info("Prompt templates initialized successfully");

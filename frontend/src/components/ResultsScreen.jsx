@@ -77,7 +77,7 @@ const ResultsScreen = ({ jobId }) => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiService.getAnalysis(jobId);
-        setAnalysisData((prev) => ({ ...prev, ...response.data }));
+        setAnalysisData(response.data);
         if (response.data.status === "completed") {
           setLoading(false);
           setPolling(false);
@@ -98,7 +98,7 @@ const ResultsScreen = ({ jobId }) => {
           // Immediately fetch one more time to get the completed result
           fetchingFinal = true;
           const finalResponse = await apiService.getAnalysis(jobId);
-          setAnalysisData((prev) => ({ ...prev, ...finalResponse.data }));
+          setAnalysisData(finalResponse.data);
           if (finalResponse.data.status === "completed") {
             setLoading(false);
             setPolling(false);
@@ -110,7 +110,7 @@ const ResultsScreen = ({ jobId }) => {
       }
     }, 5000);
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       clearInterval(pollInterval);
       setPolling(false);
       setError(
@@ -118,6 +118,9 @@ const ResultsScreen = ({ jobId }) => {
       );
       setLoading(false);
     }, 600000);
+
+    // When analysis completes:
+    clearTimeout(timeoutId);
   };
 
   const formatMetric = (value, type = "number") => {
@@ -149,6 +152,13 @@ const ResultsScreen = ({ jobId }) => {
               <p className="text-xs text-muted-foreground mt-2">
                 Progress: {analysisData?.progress || 0}%
               </p>
+            </div>
+          )}
+          {/* Footnote for user guidance during long analysis */}
+          {polling && (
+            <div className="text-xs text-muted-foreground mt-4">
+              You can return to the dashboard while we analyze your data and generate insights.<br />
+              Once the analysis is complete, you can access the results from the dashboard.
             </div>
           )}
         </div>
@@ -220,6 +230,15 @@ const ResultsScreen = ({ jobId }) => {
       </div>
     );
   }
+
+  // Fallback detection for LLM/AI failure
+  const aiInsightsFailed =
+    analysis.insights &&
+    ((Array.isArray(analysis.insights.insights) &&
+      analysis.insights.insights.length === 1 &&
+      analysis.insights.insights[0].message?.includes('Failed to generate insights via LLM')) ||
+      analysis.insights.aiGenerated === false);
+  const showAISections = !aiInsightsFailed && analysis.insights?.aiGenerated !== false;
 
   return (
     <div className="space-y-8">
@@ -344,7 +363,7 @@ const ResultsScreen = ({ jobId }) => {
       </Card>
 
       {/* AI Insights Section */}
-      {analysis.insights &&
+      {showAISections && analysis.insights &&
         Array.isArray(analysis.insights.insights) &&
         analysis.insights.insights.length > 0 && (
           <Card>
@@ -361,7 +380,7 @@ const ResultsScreen = ({ jobId }) => {
               <ul className="list-disc pl-6 space-y-2">
                 {analysis.insights.insights.map((insight, idx) => (
                   <li key={idx} className="text-muted-foreground">
-                    {insight}
+                    {insight.message || insight}
                   </li>
                 ))}
               </ul>
@@ -370,7 +389,7 @@ const ResultsScreen = ({ jobId }) => {
         )}
 
       {/* AI Tasks Section */}
-      {analysis.tasks &&
+      {showAISections && analysis.tasks &&
         Array.isArray(analysis.tasks.tasks) &&
         analysis.tasks.tasks.length > 0 && (
           <Card>
@@ -428,76 +447,11 @@ const ResultsScreen = ({ jobId }) => {
           </Card>
         )}
 
-      {/* Optimization Tasks */}
-      {analysis.optimizationTasks && analysis.optimizationTasks.length > 0 && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="h-5 w-5" />
-                <span>Optimization Recommendations</span>
-              </CardTitle>
-              <CardDescription>
-                AI-generated strategies to improve your campaign performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {analysis.optimizationTasks.map((task, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Badge
-                          variant={
-                            task.priority === "high"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {task.priority}
-                        </Badge>
-                        <span className="font-medium">{task.type}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">{task.estimatedImpact}</Badge>
-                        {task.difficulty && (
-                          <Badge variant="outline">{task.difficulty}</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {task.description}
-                    </p>
-                    {task.actionItems && task.actionItems.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Action Items:</p>
-                        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {task.actionItems.map((item, itemIndex) => (
-                            <li
-                              key={itemIndex}
-                              className="flex items-center space-x-2"
-                            >
-                              <div className="w-1 h-1 bg-primary rounded-full"></div>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          {/* AI Fallback Footnote */}
-          {analysisData.aiGenerated === false && (
-            <div className="text-xs text-yellow-600 mt-2">
-              <strong>Note:</strong> Insights and recommendations shown here are
-              template-based and not generated by AI due to a temporary
-              fallback.
-            </div>
-          )}
-        </>
+      {/* Fallback Notice for LLM Failure */}
+      {aiInsightsFailed && (
+        <div className="text-xs text-yellow-600 mt-2">
+          <strong>Note:</strong> AI-generated insights are unavailable for this report. Showing available data only.
+        </div>
       )}
 
       {/* Top Performers */}
@@ -555,6 +509,106 @@ const ResultsScreen = ({ jobId }) => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Bottom Performers */}
+      {analysis.performance.bottomPerformers && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bottom Performers by CTR</CardTitle>
+              <CardDescription>
+                Keywords with the lowest click-through rates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {analysis.performance.bottomPerformers.byCTR
+                  ?.slice(0, 5)
+                  .map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted/50 rounded"
+                    >
+                      <span className="font-medium">{item.keyword}</span>
+                      <span className="text-sm text-muted-foreground">
+                        CTR: {formatMetric(item.calculated_ctr, "percentage")}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Bottom Performers by ACOS</CardTitle>
+              <CardDescription>
+                Keywords with the highest advertising cost of sale
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {analysis.performance.bottomPerformers.byACOS
+                  ?.slice(0, 5)
+                  .map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted/50 rounded"
+                    >
+                      <span className="font-medium">{item.keyword}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ACOS: {formatMetric(item.calculated_acos, "percentage")}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Bottom Performers by ROAS</CardTitle>
+              <CardDescription>
+                Keywords with the lowest return on ad spend
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {analysis.performance.bottomPerformers.byROAS
+                  ?.slice(0, 5)
+                  .map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted/50 rounded"
+                    >
+                      <span className="font-medium">{item.keyword}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ROAS: {formatMetric(item.calculated_roas)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Zero Conversion Keywords */}
+      {analysis.trends && analysis.trends.zeroConversionKeywords && Array.isArray(analysis.insights?.insights?.["2. Notable trends"]?.["Zero Conversion Keywords"]) && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Zero Conversion Keywords</CardTitle>
+            <CardDescription>
+              Keywords that have not resulted in any conversions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc pl-6 space-y-1">
+              {analysis.insights.insights["2. Notable trends"]["Zero Conversion Keywords"].slice(0, 20).map((keyword, idx) => (
+                <li key={idx} className="text-muted-foreground">{keyword}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

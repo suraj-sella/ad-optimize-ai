@@ -99,6 +99,24 @@ const DashboardScreen = ({ onNavigate }) => {
     }
   };
 
+  // Card color variants by status
+  const cardBgVariants = {
+    completed: "bg-green-50 dark:bg-green-900/30",
+    processing: "bg-blue-50 dark:bg-blue-900/30",
+    failed: "bg-red-50 dark:bg-red-900/30",
+    pending: "bg-gray-50 dark:bg-gray-900/30",
+    default: "bg-muted/50 dark:bg-muted/30",
+  };
+
+  // Add this utility function for file size formatting
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -134,22 +152,8 @@ const DashboardScreen = ({ onNavigate }) => {
       {/* Stats Grid */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Uploads
-              </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.totalUploads || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">All time uploads</p>
-            </CardContent>
-          </Card>
-
-          <Card>
+          {/* Completed Card */}
+          <Card className={cardBgVariants.completed}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
@@ -158,13 +162,12 @@ const DashboardScreen = ({ onNavigate }) => {
               <div className="text-2xl font-bold">
                 {stats.completedUploads || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Successful analyses
-              </p>
+              <p className="text-xs text-muted-foreground">Analysis finished</p>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Processing Card */}
+          <Card className={cardBgVariants.processing}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Processing</CardTitle>
               <Clock className="h-4 w-4 text-blue-500" />
@@ -173,13 +176,12 @@ const DashboardScreen = ({ onNavigate }) => {
               <div className="text-2xl font-bold">
                 {stats.processingUploads || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Currently analyzing
-              </p>
+              <p className="text-xs text-muted-foreground">Currently analyzing</p>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Failed Card */}
+          <Card className={cardBgVariants.failed}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Failed</CardTitle>
               <AlertCircle className="h-4 w-4 text-red-500" />
@@ -188,7 +190,21 @@ const DashboardScreen = ({ onNavigate }) => {
               <div className="text-2xl font-bold">
                 {stats.failedUploads || 0}
               </div>
-              <p className="text-xs text-muted-foreground">Failed uploads</p>
+              <p className="text-xs text-muted-foreground">Analysis failed</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Card */}
+          <Card className={cardBgVariants.default}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Uploads</CardTitle>
+              <FileText className="h-4 w-4 text-gray-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.totalUploads || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">All uploads</p>
             </CardContent>
           </Card>
         </div>
@@ -234,7 +250,7 @@ const DashboardScreen = ({ onNavigate }) => {
                     <div>
                       <p className="font-medium">{upload.filename}</p>
                       <p className="text-sm text-muted-foreground">
-                        {(upload.file_size / 1024).toFixed(2)} KB
+                        {formatFileSize(upload.file_size)}
                       </p>
                     </div>
                   </div>
