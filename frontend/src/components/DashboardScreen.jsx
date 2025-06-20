@@ -62,7 +62,7 @@ const DashboardScreen = ({ onNavigate }) => {
 
   const getStatusBadge = (status) => {
     const variants = {
-      completed: "default",
+      completed: "success",
       processing: "secondary",
       failed: "destructive",
       pending: "outline",
@@ -72,13 +72,24 @@ const DashboardScreen = ({ onNavigate }) => {
   };
 
   const handleDeleteUpload = async (jobId) => {
-    if (!window.confirm("Are you sure you want to delete this upload and all associated data? This action cannot be undone.")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this upload and all associated data? This action cannot be undone."
+      )
+    ) {
       return;
     }
     setDeletingJobId(jobId);
     try {
       await apiService.deleteUpload(jobId);
-      setRecentUploads((prev) => prev.filter((u) => u.job_id !== jobId));
+      setRecentUploads((prev) => {
+        const updated = prev.filter((u) => u.job_id !== jobId);
+        // Notify parent if no uploads left
+        if (updated.length === 0) {
+          onNavigate && onNavigate("dashboard", null, 0);
+        }
+        return updated;
+      });
       // Optionally reload stats
       loadDashboardData();
     } catch (error) {
@@ -110,7 +121,11 @@ const DashboardScreen = ({ onNavigate }) => {
           Upload your advertising data and get intelligent insights to optimize
           your campaigns
         </p>
-        <Button size="lg" onClick={() => onNavigate("upload")} className="mt-4">
+        <Button
+          size="lg"
+          onClick={() => onNavigate("upload", null, recentUploads.length)}
+          className="mt-4"
+        >
           <Upload className="h-5 w-5 mr-2" />
           Upload CSV File
         </Button>
@@ -156,7 +171,7 @@ const DashboardScreen = ({ onNavigate }) => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.pendingUploads || 0}
+                {stats.processingUploads || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Currently analyzing
@@ -198,7 +213,7 @@ const DashboardScreen = ({ onNavigate }) => {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => onNavigate("upload")}
+                onClick={() => onNavigate("upload", null, 0)}
               >
                 Upload your first file
               </Button>
@@ -209,14 +224,17 @@ const DashboardScreen = ({ onNavigate }) => {
                 <div
                   key={upload.job_id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => onNavigate("results", upload.job_id)}
+                  onClick={() => {
+                    if (upload.status === "failed") return;
+                    onNavigate("results", upload.job_id, recentUploads.length);
+                  }}
                 >
                   <div className="flex items-center space-x-4">
                     {getStatusIcon(upload.status)}
                     <div>
                       <p className="font-medium">{upload.filename}</p>
                       <p className="text-sm text-muted-foreground">
-                        {(upload.file_size / 1024 / 1024).toFixed(2)} MB
+                        {(upload.file_size / 1024).toFixed(2)} KB
                       </p>
                     </div>
                   </div>
@@ -229,14 +247,16 @@ const DashboardScreen = ({ onNavigate }) => {
                       variant="ghost"
                       size="icon"
                       disabled={deletingJobId === upload.job_id}
-                      onClick={e => {
+                      onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteUpload(upload.job_id);
                       }}
                       title="Delete upload"
                     >
                       {deletingJobId === upload.job_id ? (
-                        <span className="animate-spin"><Trash2 className="h-4 w-4 text-red-500" /></span>
+                        <span className="animate-spin">
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </span>
                       ) : (
                         <Trash2 className="h-4 w-4 text-red-500" />
                       )}
@@ -262,7 +282,10 @@ const DashboardScreen = ({ onNavigate }) => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => onNavigate("upload")}>
+            <Button
+              className="w-full"
+              onClick={() => onNavigate("upload", null, recentUploads.length)}
+            >
               Start Upload
             </Button>
           </CardContent>
@@ -282,7 +305,8 @@ const DashboardScreen = ({ onNavigate }) => {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => onNavigate("results")}
+              onClick={() => onNavigate("results", null, recentUploads.length)}
+              disabled={recentUploads.length === 0}
             >
               View Results
             </Button>

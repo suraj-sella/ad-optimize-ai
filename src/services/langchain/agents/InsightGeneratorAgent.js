@@ -1,19 +1,22 @@
-const BaseAgent = require('../../../agents/baseAgent');
-const promptManager = require('../prompts');
+const BaseAgent = require("../../../agents/baseAgent");
+const promptManager = require("../prompts");
 
 class InsightGeneratorAgent extends BaseAgent {
   constructor() {
-    super('InsightGeneratorAgent');
+    super("InsightGeneratorAgent");
   }
 
   async execute(analysisData) {
-    this.logger.info('InsightGeneratorAgent generating insights...');
+    this.logger.info("InsightGeneratorAgent generating insights...");
     // Prepare prompt for LLM
-    const prompt = promptManager.getTemplate('analysis');
+    const prompt = promptManager.getTemplate("analysis");
     const input = {
       metrics: analysisData.metrics,
       patterns: analysisData.patterns,
-      anomalies: analysisData.anomalies
+      anomalies: analysisData.anomalies,
+      topPerformers: analysisData.topPerformers,
+      bottomPerformers: analysisData.bottomPerformers,
+      trends: analysisData.trends,
     };
     // Call LLM for insights
     let insights = [];
@@ -22,27 +25,36 @@ class InsightGeneratorAgent extends BaseAgent {
       if (this.llm && prompt) {
         const chain = prompt.pipe(this.llm);
         const result = await chain.invoke({ data: JSON.stringify(input) });
-        // Try to parse as JSON, fallback to string
+        // Ensure output is always JSON
         try {
-          insights = typeof result === 'string' ? JSON.parse(result) : result;
+          if (typeof result === "string") {
+            insights = JSON.parse(result);
+          } else {
+            insights = result;
+          }
         } catch (e) {
-          insights = [result];
+          // If not JSON, wrap in a JSON object
+          insights = [
+            {
+              message:
+                typeof result === "string" ? result : JSON.stringify(result),
+            },
+          ];
         }
       } else {
-        insights = ['LLM or prompt not available'];
+        insights = [{ message: "LLM or prompt not available" }];
         aiGenerated = false;
       }
     } catch (err) {
-      this.logger.error('LLM call failed:', err);
-      insights = ['Failed to generate insights via LLM'];
+      this.logger.error("LLM call failed:", err);
+      insights = [{ message: "Failed to generate insights via LLM" }];
       aiGenerated = false;
     }
     return {
       insights,
-      raw: analysisData,
-      aiGenerated
+      aiGenerated,
     };
   }
 }
 
-module.exports = InsightGeneratorAgent; 
+module.exports = InsightGeneratorAgent;

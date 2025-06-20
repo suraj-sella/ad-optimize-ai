@@ -1,5 +1,5 @@
 const { PromptTemplate } = require("@langchain/core/prompts");
-const logger = require('../../utils/logger');
+const logger = require("../../utils/logger");
 
 class PromptManager {
   constructor() {
@@ -34,12 +34,12 @@ class PromptManager {
         3. Priority level
         4. Implementation difficulty
         
-        Format your response as a structured JSON object.
+        Format your response as a JSON array. Each array element should be an object with the following fields: recommendation, impact, priority, and difficulty. Do not wrap the array in an outer object.
       `);
 
-      logger.info('Prompt templates initialized successfully');
+      logger.info("Prompt templates initialized successfully");
     } catch (error) {
-      logger.error('Failed to initialize prompt templates:', error);
+      logger.error("Failed to initialize prompt templates:", error);
       throw error;
     }
   }
@@ -53,4 +53,4 @@ class PromptManager {
 }
 
 // Export singleton instance
-module.exports = new PromptManager(); 
+module.exports = new PromptManager();

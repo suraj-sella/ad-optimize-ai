@@ -1,6 +1,4 @@
-// const { ChatHuggingFace } = require("@langchain/community/chat_models");
-// const { HfInference } = require("@huggingface/inference");
-const { logger } = require("../../utils/logger");
+const logger = require("../../utils/logger");
 
 class LangChainConfig {
   constructor() {
@@ -10,24 +8,60 @@ class LangChainConfig {
 
   async initialize() {
     try {
-      const { ChatHuggingFace } = await import(
-        "@langchain/community/chat_models/huggingface"
-      ); // 🟡 risky but may work
+      // Alternative approach using HuggingFace Inference API directly
       const { HfInference } = await import("@huggingface/inference");
 
       // Initialize HuggingFace client
-      const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
+      this.hfClient = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
-      // Initialize the chat model
-      this.model = new ChatHuggingFace({
-        model: "mistralai/Mistral-7B-Instruct-v0.2", // Using Mistral as it's a good open-source model
-        temperature: 0.7,
-        maxTokens: 1000,
-        huggingFaceApiKey: process.env.HUGGINGFACE_API_KEY,
-      });
+      // Create a wrapper that mimics LangChain's interface
+      this.model = {
+        invoke: async (messages) => {
+          try {
+            // Convert LangChain message format to HF format
+            let prompt = "";
+            if (Array.isArray(messages)) {
+              prompt = messages
+                .map((msg) => {
+                  if (typeof msg === "string") return msg;
+                  return msg.content || msg.text || String(msg);
+                })
+                .join("\n");
+            } else {
+              prompt = messages.content || messages.text || String(messages);
+            }
+
+            const response = await this.hfClient.textGeneration({
+              model: "mistralai/Mistral-7B-Instruct-v0.3",
+              inputs: prompt,
+              parameters: {
+                max_new_tokens: 1000,
+                temperature: 0.7,
+                return_full_text: false,
+              },
+            });
+
+            // Return in LangChain-compatible format
+            return {
+              content: response.generated_text,
+              text: response.generated_text,
+            };
+          } catch (error) {
+            logger.error("Error in model invocation:", error);
+            throw error;
+          }
+        },
+
+        // Alternative method name that some LangChain versions use
+        call: async (messages) => {
+          return this.invoke(messages);
+        },
+      };
 
       this.initialized = true;
-      logger.info("LangChain configuration initialized successfully");
+      logger.info(
+        "LangChain configuration initialized successfully with HF direct API"
+      );
     } catch (error) {
       logger.error("Failed to initialize LangChain configuration:", error);
       throw error;

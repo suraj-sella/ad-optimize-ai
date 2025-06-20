@@ -2,6 +2,7 @@ const Queue = require("bull");
 const logger = require("../utils/logger");
 const csvProcessor = require("./csvProcessor");
 const db = require("../config/database");
+const { runAgentPipeline } = require("./langchain/agents/orchestrator");
 
 class JobQueue {
   constructor() {
@@ -86,55 +87,60 @@ class JobQueue {
       logger.info(`Starting CSV analysis for job ${jobId}, file: ${filename}`);
 
       // Update job status to processing
-      await this.updateJobStatus(jobId, "processing", 0, null, null, "Starting analysis");
+      await this.updateJobStatus(
+        jobId,
+        "processing",
+        0,
+        null,
+        null,
+        "Starting analysis"
+      );
 
       // Report progress
       job.progress(10);
       await this.updateJobProgress(jobId, 10, "Processing CSV file");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Process CSV file
+
+      // Parse and validate CSV file
       const processedData = await csvProcessor.processCSV(filePath);
 
       job.progress(50);
-      await this.updateJobProgress(jobId, 50, "Storing processed data");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Store processed data in database
-      await this.storeProcessedData(jobId, processedData.data);
+      await this.updateJobProgress(jobId, 50, "Running agent pipeline");
 
-      job.progress(70);
-      await this.updateJobProgress(jobId, 70, "Generating analysis");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Generate analysis
-      const analysis = csvProcessor.generateAnalysis(processedData.data);
+      // Run orchestrator pipeline (agents)
+      const agentOutput = await runAgentPipeline(processedData.data);
+      // agentOutput: { analysis, insights, tasks, aiGenerated }
 
       job.progress(80);
       await this.updateJobProgress(jobId, 80, "Storing analysis results");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Store analysis results
-      await this.storeAnalysisResults(jobId, processedData, analysis);
+
+      // Store orchestrator output in database (analysis, insights, tasks)
+      await this.storeAnalysisResults(jobId, processedData, agentOutput);
 
       job.progress(90);
       await this.updateJobProgress(jobId, 90, "Storing historical data");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
-      // Store historical data for trend analysis
+
+      // Store historical data for trend analysis (use summary from agentOutput.analysis if available)
       await this.storeHistoricalData(jobId, {
         date_range: {
           start: new Date().toISOString(),
           end: new Date().toISOString(),
         },
-        performance_metrics: analysis.summary,
+        performance_metrics:
+          agentOutput.analysis?.metrics || agentOutput.analysis?.summary || {},
       });
 
       logger.info(`CSV analysis completed for job ${jobId}`);
       job.progress(100);
       await this.updateJobProgress(jobId, 100, "Analysis complete");
-      // await new Promise((resolve) => setTimeout(resolve, 5000));
 
       return {
         success: true,
         processedRows: processedData.validRows,
         totalRows: processedData.totalRows,
-        analysis: analysis,
+        analysis: agentOutput.analysis,
+        insights: agentOutput.insights,
+        tasks: agentOutput.tasks,
+        aiGenerated: agentOutput.aiGenerated,
       };
     } catch (error) {
       logger.error(`Error processing CSV job ${jobId}:`, error);
@@ -279,7 +285,7 @@ class JobQueue {
   /**
    * Store analysis results in database
    */
-  async storeAnalysisResults(jobId, processedData, analysis) {
+  async storeAnalysisResults(jobId, processedData, agentOutput) {
     try {
       // Get the analysis job ID
       const jobQuery = "SELECT id FROM analysis_jobs WHERE job_id = $1";
@@ -291,30 +297,43 @@ class JobQueue {
 
       const analysisJobId = jobResult.rows[0].id;
 
+      // Insert orchestrator output (analysis, insights, tasks) into analysis_results
       const query = `
         INSERT INTO analysis_results 
-        (job_id, total_rows, processed_rows, metrics_summary, top_performers, bottom_performers, trends)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (job_id, total_rows, processed_rows, metrics_summary, top_performers, bottom_performers, trends, insights, tasks)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `;
 
+      const analysis = agentOutput.analysis || {};
       const values = [
         analysisJobId,
         processedData.totalRows,
         processedData.validRows,
-        JSON.stringify(analysis.summary),
-        JSON.stringify(analysis.topPerformers),
-        JSON.stringify(analysis.bottomPerformers),
-        JSON.stringify(analysis.trends),
+        JSON.stringify(analysis.summary || analysis.metrics || {}),
+        JSON.stringify(
+          analysis.topPerformers || analysis.top_performers || null
+        ),
+        JSON.stringify(
+          analysis.bottomPerformers || analysis.bottom_performers || null
+        ),
+        JSON.stringify(analysis.trends || null),
+        agentOutput.insights ? JSON.stringify(agentOutput.insights) : null,
+        agentOutput.tasks ? JSON.stringify(agentOutput.tasks) : null,
       ];
 
       await db.query(query, values);
 
-      // Store recommendations as optimization tasks
-      await this.updateOptimizationTasks(jobId, analysis.recommendations);
+      // Store recommendations as optimization tasks (if present)
+      if (agentOutput.tasks) {
+        await this.updateOptimizationTasks(jobId, agentOutput.tasks.tasks);
+      }
 
-      logger.info(`Stored analysis results for job ${jobId}`);
+      logger.info(`Stored orchestrator analysis results for job ${jobId}`);
     } catch (error) {
-      logger.error(`Error storing analysis results for job ${jobId}:`, error);
+      logger.error(
+        `Error storing orchestrator analysis results for job ${jobId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -341,7 +360,7 @@ class JobQueue {
       for (const task of tasks) {
         const query = `
           INSERT INTO optimization_tasks 
-          (job_id, task_type, priority, description, action_items, estimated_impact, status)
+          (job_id, task_type, priority, description, estimated_impact, difficulty, status)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
         `;
         const values = [
@@ -349,8 +368,8 @@ class JobQueue {
           task.type,
           task.priority,
           task.description,
-          JSON.stringify(task.action_items || []),
-          task.impact,
+          task.impact || task.estimated_impact || null,
+          task.difficulty || null,
           "pending",
         ];
         await db.query(query, values);
@@ -444,11 +463,13 @@ class JobQueue {
           ar.top_performers,
           ar.bottom_performers,
           ar.trends,
+          ar.insights,
+          ar.tasks,
           ot.task_type,
           ot.priority,
           ot.description,
-          ot.action_items,
           ot.estimated_impact,
+          ot.difficulty,
           ot.status as optimization_status
         FROM analysis_jobs aj
         LEFT JOIN analysis_results ar ON aj.id = ar.job_id
@@ -471,6 +492,8 @@ class JobQueue {
           top_performers: result.rows[0].top_performers,
           bottom_performers: result.rows[0].bottom_performers,
           trends: result.rows[0].trends,
+          insights: result.rows[0].insights,
+          tasks: result.rows[0].tasks,
           status: result.rows[0].status,
         },
         optimizationTasks: [],
@@ -482,8 +505,8 @@ class JobQueue {
             task_type: row.task_type,
             priority: row.priority,
             description: row.description,
-            action_items: row.action_items,
             estimated_impact: row.estimated_impact,
+            difficulty: row.difficulty,
             status: row.optimization_status, // Use the aliased status here
           });
         }
@@ -520,7 +543,12 @@ class JobQueue {
   async removeJob(jobId) {
     try {
       // Bull job IDs are numeric, but we use our own jobId as job.data.jobId
-      const jobs = await this.analysisQueue.getJobs(['waiting', 'active', 'delayed', 'paused']);
+      const jobs = await this.analysisQueue.getJobs([
+        "waiting",
+        "active",
+        "delayed",
+        "paused",
+      ]);
       for (const job of jobs) {
         if (job.data && job.data.jobId === jobId) {
           await job.remove();
@@ -528,7 +556,9 @@ class JobQueue {
           return true;
         }
       }
-      logger.info(`No active queue job found for jobId ${jobId} (may already be processed or removed)`);
+      logger.info(
+        `No active queue job found for jobId ${jobId} (may already be processed or removed)`
+      );
       return false;
     } catch (error) {
       logger.error(`Error removing job ${jobId} from queue:`, error);

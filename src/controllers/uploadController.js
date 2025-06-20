@@ -276,8 +276,8 @@ class UploadController {
       const totalUploadsResult = await db.query(
         "SELECT COUNT(*) FROM analysis_jobs"
       );
-      const pendingUploadsResult = await db.query(
-        "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'pending'"
+      const processingUploadsResult = await db.query(
+        "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'pending' OR status = 'processing'"
       );
       const completedUploadsResult = await db.query(
         "SELECT COUNT(*) FROM analysis_jobs WHERE status = 'completed'"
@@ -290,7 +290,7 @@ class UploadController {
         success: true,
         data: {
           totalUploads: parseInt(totalUploadsResult.rows[0].count),
-          pendingUploads: parseInt(pendingUploadsResult.rows[0].count),
+          processingUploads: parseInt(processingUploadsResult.rows[0].count),
           completedUploads: parseInt(completedUploadsResult.rows[0].count),
           failedUploads: parseInt(failedUploadsResult.rows[0].count),
         },

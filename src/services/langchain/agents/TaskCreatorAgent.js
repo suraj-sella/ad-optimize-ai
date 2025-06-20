@@ -22,15 +22,27 @@ class TaskCreatorAgent extends BaseAgent {
         const result = await chain.invoke({ analysis: JSON.stringify(input) });
         // Try to parse as JSON, fallback to string
         try {
-          const parsedTasks =
-            typeof result === "string" ? JSON.parse(result) : result;
+          let parsedTasks;
+          if (typeof result === "string") {
+            parsedTasks = JSON.parse(result);
+          } else if (result && typeof result.content === "string") {
+            parsedTasks = JSON.parse(result.content);
+          } else if (result && typeof result.text === "string") {
+            parsedTasks = JSON.parse(result.text);
+          } else {
+            parsedTasks = result;
+          }
           // Format tasks for database
           tasks = Array.isArray(parsedTasks)
             ? parsedTasks.map((task) => ({
                 type: task.type || "general",
                 priority: task.priority || "medium",
-                description: task.description || "No description provided",
+                description:
+                  task.recommendation ||
+                  task.description ||
+                  "No description provided",
                 impact: task.impact || "medium",
+                difficulty: task.difficulty || "medium",
                 action_items: task.action_items || [],
               }))
             : [
@@ -39,6 +51,7 @@ class TaskCreatorAgent extends BaseAgent {
                   priority: "medium",
                   description: "Failed to parse task format",
                   impact: "low",
+                  difficulty: "medium",
                   action_items: [],
                 },
               ];
@@ -49,6 +62,7 @@ class TaskCreatorAgent extends BaseAgent {
               priority: "medium",
               description: result,
               impact: "low",
+              difficulty: "medium",
               action_items: [],
             },
           ];
@@ -80,8 +94,7 @@ class TaskCreatorAgent extends BaseAgent {
     }
     return {
       tasks,
-      raw: insightData,
-      aiGenerated
+      aiGenerated,
     };
   }
 }

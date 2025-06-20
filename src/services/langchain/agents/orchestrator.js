@@ -1,7 +1,8 @@
-const langchainConfig = require('../../langchain/config');
-const DataAnalyzerAgent = require('./DataAnalyzerAgent');
-const InsightGeneratorAgent = require('./InsightGeneratorAgent');
-const TaskCreatorAgent = require('./TaskCreatorAgent');
+const logger = require("../../../utils/logger");
+const langchainConfig = require("../../langchain/config");
+const DataAnalyzerAgent = require("./DataAnalyzerAgent");
+const InsightGeneratorAgent = require("./InsightGeneratorAgent");
+const TaskCreatorAgent = require("./TaskCreatorAgent");
 
 /**
  * Orchestrate the multi-agent pipeline
@@ -28,13 +29,14 @@ async function runAgentPipeline(csvData) {
     const taskResult = await taskCreator.execute(insightResult);
 
     // Determine if AI was used for both insights and tasks
-    const aiGenerated = (insightResult.aiGenerated !== false) && (taskResult.aiGenerated !== false);
+    const aiGenerated =
+      insightResult.aiGenerated !== false && taskResult.aiGenerated !== false;
 
     return {
       analysis: analysisResult,
       insights: insightResult,
       tasks: taskResult,
-      aiGenerated
+      aiGenerated,
     };
   } catch (error) {
     // Handle errors gracefully
@@ -42,4 +44,4 @@ async function runAgentPipeline(csvData) {
   }
 }
 
-module.exports = { runAgentPipeline }; 
+module.exports = { runAgentPipeline };

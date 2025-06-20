@@ -1,11 +1,17 @@
 const langchainConfig = require('../services/langchain/config');
 const promptManager = require('../services/langchain/prompts');
 const logger = require('../utils/logger');
+const { RunnableLambda } = require("@langchain/core/runnables");
 
 class BaseAgent {
   constructor(agentName) {
     this.agentName = agentName;
-    this.llm = langchainConfig.getModel();
+    this.llm = new RunnableLambda({
+      func: async (messages) => {
+        const model = langchainConfig.getModel();
+        return model.invoke(messages);
+      }
+    });
     this.logger = logger;
   }
 

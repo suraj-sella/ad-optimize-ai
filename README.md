@@ -234,7 +234,12 @@ Get the status of an upload/analysis job.
 }
 ```
 
-**Response (Completed):**
+#### Analysis Results
+
+**GET /api/analysis/:id**
+Get detailed analysis results for a completed job.
+
+**Response:**
 ```json
 {
   "success": true,
@@ -278,18 +283,37 @@ Get the status of an upload/analysis job.
         "highACOSKeywords": 75,
         "zeroConversionKeywords": 200
       },
-      "optimizationTasks": [...]
+      "insights": {
+        "insights": [
+          "Top keywords by ROAS are ...",
+          "Zero conversion keywords detected ..."
+        ]
+      },
+      "tasks": {
+        "tasks": [
+          {
+            "type": "general",
+            "priority": "High",
+            "description": "Optimize bids for high cost keywords ...",
+            "impact": "Decrease in cost per conversion ...",
+            "difficulty": "Medium"
+          }
+        ]
+      },
+      "optimizationTasks": [
+        {
+          "type": "general",
+          "priority": "High",
+          "description": "Optimize bids for high cost keywords ...",
+          "estimatedImpact": "Decrease in cost per conversion ...",
+          "difficulty": "Medium",
+          "status": "pending"
+        }
+      ]
     }
   }
 }
 ```
-
-#### Analysis Results
-
-**GET /api/analysis/:id**
-Get detailed analysis results for a completed job.
-
-**Response:** Same as the completed status response above.
 
 #### Optimization Strategies
 

@@ -16,30 +16,41 @@ import DashboardScreen from "./components/DashboardScreen";
 function App() {
   const [currentScreen, setCurrentScreen] = useState("dashboard");
   const [currentJobId, setCurrentJobId] = useState(null);
+  const [hasUploads, setHasUploads] = useState(false);
 
   const navigation = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "upload", label: "Upload", icon: Upload },
-    { id: "results", label: "Results", icon: BarChart3 },
+    { id: "results", label: "Results", icon: BarChart3, disabled: !hasUploads },
   ];
 
   const renderScreen = () => {
     switch (currentScreen) {
       case "dashboard":
-        return <DashboardScreen onNavigate={(screen, jobId) => {
-          if (screen === "results" && jobId) {
-            setCurrentJobId(jobId);
-            setCurrentScreen("results");
-          } else {
-            setCurrentScreen(screen);
-          }
-        }} />;
+        return (
+          <DashboardScreen
+            onNavigate={(screen, jobId, uploadsCount) => {
+              if (typeof uploadsCount === "number")
+                setHasUploads(uploadsCount > 0);
+              if (screen === "results" && jobId) {
+                setCurrentJobId(jobId);
+                setCurrentScreen("results");
+              } else if (screen === "results" && !hasUploads) {
+                // Prevent navigation if no uploads
+                return;
+              } else {
+                setCurrentScreen(screen);
+              }
+            }}
+          />
+        );
       case "upload":
         return (
           <UploadScreen
             onUploadSuccess={(jobId) => {
               setCurrentJobId(jobId);
               setCurrentScreen("results");
+              setHasUploads(true);
             }}
           />
         );
@@ -49,6 +60,32 @@ function App() {
         return <DashboardScreen onNavigate={setCurrentScreen} />;
     }
   };
+
+  // Render navigation menu
+  const renderNavMenu = () => (
+    <nav className="border-b bg-gray-200">
+      <div className="container mx-auto px-4">
+        <div className="flex space-x-1">
+          {navigation.map((nav) => (
+            <Button
+              key={nav.id}
+              variant={currentScreen === nav.id ? "default" : "ghost"}
+              onClick={() => {
+                if (nav.disabled) return;
+                if (nav.id === "results" && !hasUploads) return;
+                setCurrentScreen(nav.id);
+              }}
+              disabled={nav.disabled}
+              className="flex items-center space-x-2"
+            >
+              <nav.icon className="h-5 w-5 mr-2" />
+              {nav.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,27 +111,7 @@ function App() {
         </div>
       </header>
 
-      {/* Navigation */}
-      <nav className="border-b bg-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="flex space-x-1">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.id}
-                  variant={currentScreen === item.id ? "default" : "ghost"}
-                  className="flex items-center space-x-2"
-                  onClick={() => setCurrentScreen(item.id)}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      {renderNavMenu()}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">{renderScreen()}</main>
